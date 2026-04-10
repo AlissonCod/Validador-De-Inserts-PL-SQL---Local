@@ -116,28 +116,36 @@ class AppSQL(ctk.CTk):
         ctk.set_appearance_mode("dark")
 
         # Configuração de Grid
-        self.grid_rowconfigure(1, weight=1)
-        self.grid_rowconfigure(3, weight=1)
+        self.grid_rowconfigure(1, weight=0) # O status no topo terá altura fixa
+        self.grid_rowconfigure(3, weight=1) # Os campos de texto (meio) vão expandir
         self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=1)
 
-        # 1. Entrada de Texto
+        # 1. Status (Superior, ocupando as duas colunas)
+        self.label_status = ctk.CTkLabel(self, text="Status da Validação:", font=("Arial", 14, "bold"))
+        self.label_status.grid(row=0, column=0, columnspan=2, padx=20, pady=(10, 0), sticky="w")
+
+        self.txt_status = ctk.CTkTextbox(self, font=("Consolas", 12), height=100, state="disabled", fg_color="#1e1e1e")
+        self.txt_status.grid(row=1, column=0, columnspan=2, padx=20, pady=(5, 10), sticky="ew")
+
+        # 2. Entrada de Texto (Esquerda)
         self.label_input = ctk.CTkLabel(self, text="Cole seu INSERT SQL abaixo:", font=("Arial", 14, "bold"))
-        self.label_input.grid(row=0, column=0, padx=20, pady=(10, 0), sticky="w")
+        self.label_input.grid(row=2, column=0, padx=(20, 10), pady=(10, 0), sticky="w")
         
         self.txt_input = ctk.CTkTextbox(self, font=("Consolas", 12))
-        self.txt_input.grid(row=1, column=0, padx=20, pady=10, sticky="nsew")
+        self.txt_input.grid(row=3, column=0, padx=(20, 10), pady=10, sticky="nsew")
 
-        # 2. Botão de Ação
-        self.btn_validar = ctk.CTkButton(self, text="VALIDAR SQL", command=self.executar_validacao, 
-                                         fg_color="#f3a805", hover_color="#14375e", height=40)
-        self.btn_validar.grid(row=2, column=0, padx=20, pady=10, sticky="ew")
-
-        # 3. Saída de Resultado
+        # 3. Saída de Resultado (Direita)
         self.label_output = ctk.CTkLabel(self, text="Resultado da Análise:", font=("Arial", 14, "bold"))
-        self.label_output.grid(row=3, column=0, padx=20, pady=(10, 0), sticky="w")
+        self.label_output.grid(row=2, column=1, padx=(10, 20), pady=(10, 0), sticky="w")
 
         self.txt_output = ctk.CTkTextbox(self, font=("Consolas", 12), state="disabled", fg_color="#1e1e1e")
-        self.txt_output.grid(row=4, column=0, padx=20, pady=(0, 20), sticky="nsew")
+        self.txt_output.grid(row=3, column=1, padx=(10, 20), pady=10, sticky="nsew")
+
+        # 4. Botão de Ação (Inferior, ocupando as duas colunas)
+        self.btn_validar = ctk.CTkButton(self, text="VALIDAR SQL", command=self.executar_validacao, 
+                                         fg_color="#f3a805", hover_color="#14375e", height=40)
+        self.btn_validar.grid(row=4, column=0, columnspan=2, padx=20, pady=(10, 20), sticky="ew")
 
     def executar_validacao(self):
         # Pegar texto da interface
@@ -149,22 +157,29 @@ class AppSQL(ctk.CTk):
         # Rodar Backend
         resultado = parse_e_validar(sql_input)
 
-        # Exibir na interface
-        self.txt_output.configure(state="normal")
-        self.txt_output.delete("1.0", "end")
+        # Exibir STATUS na interface
+        self.txt_status.configure(state="normal")
+        self.txt_status.delete("1.0", "end")
         
-        res_texto = f"STATUS: {resultado.status.value}\n"
-        res_texto += f"TABELA: {resultado.tabela}\n"
-        res_texto += "-"*50 + "\n"
+        status_texto = f"STATUS: {resultado.status.value}\n"
+        status_texto += f"TABELA: {resultado.tabela}\n"
+        status_texto += "-"*50 + "\n"
         
         if resultado.erros:
-            res_texto += "ERROS ENCONTRADOS:\n"
+            status_texto += "ERROS ENCONTRADOS:\n"
             for err in resultado.erros:
-                res_texto += f" -> {err}\n"
+                status_texto += f" -> {err}\n"
         else:
-            res_texto += "✅ Nenhuma divergência de estrutura encontrada.\n"
+            status_texto += "✅ Nenhuma divergência de estrutura encontrada.\n"
             
-        res_texto += "\nMAPEAMENTO IDENTIFICADO:\n"
+        self.txt_status.insert("1.0", status_texto)
+        self.txt_status.configure(state="disabled")
+
+        # Exibir MAPEAMENTO na interface (Caixa da direita)
+        self.txt_output.configure(state="normal")
+        self.txt_output.delete("1.0", "end")
+            
+        res_texto = "MAPEAMENTO IDENTIFICADO:\n\n"
         for i in range(max(len(resultado.colunas), len(resultado.valores))):
             col = resultado.colunas[i] if i < len(resultado.colunas) else "???"
             val = resultado.valores[i] if i < len(resultado.valores) else "???"
